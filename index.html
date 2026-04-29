@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day & Night Planner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --db:#e8ddd4; --dc:#f5efe9; --dt:#3d2b1f; --dm:#8a6d5e; --da:#6b4a38; --dl:#c4b5ab;
+  --nb:#3a4a5c; --nc:#eae4df; --nt:#2c1f17; --nm:#7a6a60; --na:#4a3828; --nl:#c0b5ad;
+}
+
+body {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  background-color: #2c2c2c;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.app-container {
+  width: 1024px;
+  height: 576px;
+  position: relative;
+  background-color: var(--db);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+
+.pg { display: none; width: 100%; height: 100%; overflow: hidden; }
+.pg.on { display: block; }
+#pg0.on { display: flex; flex-direction: row; }
+
+.half { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; cursor: pointer; transition: filter .15s; }
+.half:hover { filter: brightness(.93); }
+.hd { background: var(--db); }
+.hn { background: var(--nb); }
+.hico { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.hico-d { background: rgba(61,43,31,.1); }
+.hico-n { background: rgba(234,228,223,.1); }
+.hlbl { font-family: 'DM Serif Display', serif; font-size: 42px; text-align: center; }
+.hlbl-d { color: var(--dt); }
+.hlbl-n { color: var(--nc); }
+.hsub { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .4; text-align: center; margin-top: 6px; }
+.hsub-d { color: var(--dt); }
+.hsub-n { color: var(--nc); }
+
+/* DAY & NIGHT COMMON */
+#pg1 { background: var(--db); position: relative; }
+#pg2 { background: var(--nb); }
+
+.inner { width: 100%; height: 100%; padding: 20px; overflow: hidden; }
+.dg { display: grid; grid-template-columns: 240px 1fr 250px; gap: 16px; height: calc(100% - 34px); }
+.ng { display: grid; grid-template-columns: 240px 1fr 1fr; grid-template-rows: auto 1fr; gap: 16px; height: calc(100% - 34px); }
+.col { display: flex; flex-direction: column; gap: 12px; height: 100%; overflow: hidden; }
+
+.col.right-col { overflow-y: auto; padding-right: 2px; gap: 10px; }
+.col.right-col::-webkit-scrollbar { width: 0; }
+
+.dc { background: var(--dc); border-radius: 12px; padding: 12px 14px; flex-shrink: 0; }
+.nc { background: var(--nc); border-radius: 12px; padding: 12px 14px; flex-shrink: 0; }
+.dc.grow, .nc.grow { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+/* 시계 크기 더 확대 */
+.cw { display: flex; align-items: center; gap: 16px; padding: 18px 14px !important; }
+.cf { width: 84px; height: 84px; border-radius: 50%; border: 3.5px solid var(--da); position: relative; background: var(--dc); flex-shrink: 0; }
+.ct { font-family: 'DM Serif Display', serif; font-size: 40px; color: var(--dt); letter-spacing: -1px; }
+.cd { font-size: 14px; color: var(--dm); margin-top: 6px; }
+
+.wrow { display: flex; align-items: center; gap: 10px; }
+.wi { font-size: 24px; }
+.winfo { font-size: 11px; color: var(--dm); line-height: 1.55; }
+.wloc { font-size: 12px; font-weight: 500; color: var(--dt); margin-top: 4px; }
+
+.pb { display: flex; justify-content: space-between; font-size: 11px; color: var(--dm); margin-bottom: 6px; }
+.pbg { background: var(--dl); border-radius: 20px; height: 6px; overflow: hidden; }
+.pf { background: var(--da); height: 100%; border-radius: 20px; transition: width .5s; }
+
+.mc { background: var(--dc); border-radius: 12px; padding: 12px; flex-shrink: 0; display: flex; flex-direction: column; }
+.ch { font-size: 12px; color: var(--dm); text-align: center; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+.cal-nav { cursor: pointer; font-weight: bold; padding: 0 5px; color: var(--da); transition: opacity 0.2s; }
+.cal-nav:hover { opacity: 0.6; }
+.cg { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cdh { font-size: 10px; color: var(--dm); text-align: center; margin-bottom: 2px; }
+.cdd { font-size: 11px; color: var(--dt); text-align: center; padding: 5px 0; border-radius: 4px; cursor: pointer; position: relative; }
+.cdd:hover { background: var(--dl); }
+.cdd.tod { background: var(--da); color: #f5efe9; font-weight: 500; }
+.cdd.hd::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--da); }
+.cdd.tod.hd::after { background: #f5efe9; }
+.cdd.em { pointer-events: none; }
+
+.sd { font-size: 16px; font-family: 'DM Serif Display', serif; color: var(--dt); margin-bottom: 10px; flex-shrink: 0; }
+.tl { display: flex; flex-direction: column; overflow-y: auto; flex: 1; margin-bottom: 8px; padding-right: 6px; }
+.tli { display: flex; align-items: center; gap: 8px; position: relative; padding: 5px 0; flex-shrink: 0; }
+.tll { position: absolute; left: 3.5px; top: 0; bottom: 0; width: 1.5px; background: var(--dl); }
+.tli:first-child .tll { top: 50%; }
+.tli:last-child .tll { bottom: 50%; }
+.tld { width: 8px; height: 8px; border-radius: 50%; background: var(--da); flex-shrink: 0; z-index: 1; }
+
+.tlb { background: rgba(255,255,255,.6); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--dt); flex: 1; display: flex; align-items: center; gap: 8px; }
+.sch-chk { width: 14px; height: 14px; accent-color: var(--da); cursor: pointer; flex-shrink: 0; }
+.tlb.dn span { text-decoration: line-through; opacity: 0.5; }
+.tlx { background: none; border: none; cursor: pointer; font-size: 15px; color: var(--dm); flex-shrink: 0; padding: 0 4px; }
+.tla { display: flex; gap: 6px; margin-top: auto; flex-shrink: 0; }
+.tli2 { background: rgba(255,255,255,.5); border: 1px solid var(--dl); border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--dt); font-family: 'DM Sans', sans-serif; }
+.tli2::placeholder { color: var(--dm); }
+.tlb2 { background: var(--da); color: #f5efe9; border: none; border-radius: 6px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+
+.jt { width: 100%; background: rgba(255,255,255,.5); border: 1px solid var(--dl); border-radius: 6px; padding: 8px; font-size: 12px; color: var(--dt); font-family: 'DM Sans', sans-serif; resize: none; flex: 1; }
+.jt::placeholder { color: var(--dm); }
+
+.st { font-size: 12px; font-weight: 500; color: var(--dt); margin-bottom: 6px; border-bottom: 1px solid var(--dl); padding-bottom: 5px; }
+
+.pi { width: 100%; background: rgba(255,255,255,.5); border: 1px solid var(--dl); border-radius: 6px; padding: 6px 8px; font-size: 11px; color: var(--dt); font-family: 'DM Sans', sans-serif; resize: none; flex: 1; }
+.pi::placeholder { color: var(--dm); }
+
+.trow { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--dl); }
+.tc { width: 14px; height: 14px; accent-color: var(--da); cursor: pointer; flex-shrink: 0; }
+.tt { font-size: 12px; color: var(--dt); flex: 1; background: transparent; border: none; font-family: 'DM Sans', sans-serif; width: 100%; }
+.tt::placeholder { color: var(--dm); }
+.tt:focus { outline: none; }
+.tt.dn { text-decoration: line-through; color: var(--dm); }
+
+.sb, .nsb { border: none; border-radius: 8px; padding: 10px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; width: 100%; flex-shrink: 0; font-weight: 500; }
+.sw, .nsw { border-radius: 8px; padding: 9px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; width: 100%; flex-shrink: 0; transition: background 0.2s; }
+.btn-group { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; padding-bottom: 2px; }
+
+.sb { background: var(--da); color: #f5efe9; }
+.sw { background: rgba(0,0,0,0.03); color: var(--dt); border: 1px solid var(--dl); }
+.sw:hover { background: rgba(0,0,0,0.08); }
+
+.nsb { background: var(--na); color: var(--nc); }
+.nsw { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); }
+.nsw:hover { background: rgba(255,255,255,0.2); }
+
+.plbl { font-family: 'DM Serif Display', serif; font-size: 20px; text-align: center; margin-bottom: 14px; flex-shrink: 0; }
+.plbl-d { color: var(--dt); }
+.plbl-n { color: var(--nc); }
+
+.nt2 { font-size: 13px; font-weight: 500; color: var(--nt); margin-bottom: 8px; border-bottom: 1px solid var(--nl); padding-bottom: 5px; flex-shrink: 0; }
+.fl { font-size: 11px; color: var(--nm); margin-bottom: 3px; margin-top: 8px; }
+.fl:first-of-type { margin-top: 0; }
+.fi, .nj, .np { width: 100%; background: rgba(255,255,255,.5); border: 1px solid var(--nl); border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--nt); font-family: 'DM Sans', sans-serif; resize: none; }
+.fi::placeholder, .nj::placeholder, .np::placeholder { color: var(--nm); }
+.nj, .np { flex: 1; padding: 8px; }
+
+.mw { overflow-x: hidden; padding-bottom: 4px; width: 100%; }
+.mt { border-collapse: collapse; font-size: 11px; width: 100%; table-layout: fixed; }
+.mt th { color: var(--nm); padding: 4px 2px; text-align: center; font-weight: 400; }
+.mt td:first-child { color: var(--nt); font-size: 11px; padding-right: 8px; white-space: nowrap; font-weight: 500; width: 60px; }
+.md { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--nl); cursor: pointer; margin: 2px auto; transition: background 0.15s; }
+.md.on { background: var(--na); border-color: var(--na); }
+
+.mover { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.45); align-items: flex-start; justify-content: center; padding-top: 40px; z-index: 99; }
+.mover.on { display: flex; }
+.mbox { background: var(--dc); border-radius: 12px; padding: 24px; width: 50%; max-height: 400px; overflow-y: auto; position: relative; }
+.mcls { position: absolute; top: 16px; right: 20px; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--dm); }
+.mdt { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--dt); margin-bottom: 16px; }
+.mtb { display: flex; gap: 8px; margin-bottom: 16px; }
+.mtbb { padding: 6px 14px; border-radius: 20px; font-size: 12px; border: 1px solid var(--dl); background: transparent; color: var(--dm); cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.mtbb.on { background: var(--da); color: #f5efe9; border-color: var(--da); }
+.ms { margin-bottom: 14px; }
+.mst { font-size: 11px; color: var(--dm); font-weight: 500; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.mc2 { font-size: 12px; color: var(--dt); line-height: 1.5; background: rgba(255,255,255,.5); border-radius: 8px; padding: 10px; }
+.nd { font-size: 12px; color: var(--dm); text-align: center; padding: 16px; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <div id="pg0" class="pg on">
+    <div class="half hd" id="bday">
+      <div class="hico hico-d">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3d2b1f" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4"/>
+          <line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
+          <line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
+        </svg>
+      </div>
+      <div><div class="hlbl hlbl-d">Day</div><div class="hsub hsub-d">morning routine</div></div>
+    </div>
+    <div class="half hn" id="bnight">
+      <div class="hico hico-n">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#eae4df" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </div>
+      <div><div class="hlbl hlbl-n">Night</div><div class="hsub hsub-n">end of day</div></div>
+    </div>
+  </div>
+
+  <div id="pg1" class="pg">
+    <div class="mover" id="modal">
+      <div class="mbox">
+        <button class="mcls" id="mcls">✕</button>
+        <div class="mdt" id="mdt"></div>
+        <div class="mtb">
+          <button class="mtbb on" id="tbd">☀️ Day</button>
+          <button class="mtbb" id="tbn">🌙 Night</button>
+        </div>
+        <div id="mbd"></div>
+        <div id="mbn" style="display:none"></div>
+      </div>
+    </div>
+    <div class="inner">
+      <div class="plbl plbl-d">☀️ Day</div>
+      <div class="dg">
+        <div class="col">
+          <div class="dc cw">
+            <div class="cf">
+              <!-- 시곗바늘 크기 및 위치 조정 -->
+              <div id="hh" style="position:absolute;width:3.5px;height:26px;background:var(--da);border-radius:2px;left:50%;bottom:50%;margin-left:-1.75px;transform-origin:bottom center"></div>
+              <div id="hm" style="position:absolute;width:2.5px;height:36px;background:var(--da);border-radius:2px;left:50%;bottom:50%;margin-left:-1.25px;transform-origin:bottom center"></div>
+            </div>
+            <div><div class="ct" id="ctime">--:--</div><div class="cd" id="cdate"></div></div>
+          </div>
+          <div class="dc"><div class="wrow"><span class="wi" id="wicon">⏳</span><div class="winfo"><div id="wtemp">Loading...</div><div id="wdesc">Fetching weather</div></div></div><div class="wloc">Seoul, KR</div></div>
+          <div class="dc"><div class="pb"><span id="pmon">April</span> Progress<span id="ppct">0%</span></div><div class="pbg"><div class="pf" id="pfill" style="width:0%"></div></div></div>
+          <div class="mc grow" id="mcal"></div>
+        </div>
+        
+        <div class="col">
+          <div class="dc grow" style="flex: 1.6;">
+            <div class="sd" id="sdate"></div>
+            <div class="tl" id="tl"></div>
+            <div class="tla">
+              <input class="tli2" id="tlt" placeholder="00:00" style="width:55px">
+              <input class="tli2" id="tlx" placeholder="일정 추가..." style="flex:1">
+              <button class="tlb2" id="tladd">+</button>
+            </div>
+          </div>
+          <div class="dc grow" style="flex: 0.8;">
+            <div style="font-size:11px;color:var(--dm);margin-bottom:6px;flex-shrink:0">Journal</div>
+            <textarea class="jt" id="djrnl" placeholder="What's on your mind?"></textarea>
+          </div>
+        </div>
+        
+        <div class="col right-col">
+          <div class="dc grow"><div class="st">준비물</div><textarea class="pi" id="dprep" placeholder="오늘 챙길 것들..."></textarea></div>
+          <div class="dc grow"><div class="st">Friendly Reminder</div><textarea class="pi" id="drem" placeholder="기억할 것들..."></textarea></div>
+          <div class="dc"><div class="st">Top Tasks</div><div id="tlist"></div></div>
+          <div class="btn-group">
+            <button class="sb" id="dsave">저장하기</button>
+            <button class="sw" id="d2n">🌙 Night로 이동</button>
+            <button class="sw" id="d2c">← 처음으로</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pg2" class="pg">
+    <div class="inner">
+      <div class="plbl plbl-n">🌙 Night</div>
+      <div class="ng">
+        <div class="col" style="grid-row: 1 / 3;">
+          <div class="nc grow">
+            <div class="nt2">Today I ate</div>
+            <div class="fl">Breakfast</div><textarea class="fi" id="nbk" placeholder="아침..." rows="2"></textarea>
+            <div class="fl">Lunch</div><textarea class="fi" id="nlch" placeholder="점심..." rows="2"></textarea>
+            <div class="fl">Dinner</div><textarea class="fi" id="ndn" placeholder="저녁..." rows="2"></textarea>
+            <div class="fl">Snacks</div><textarea class="fi" id="nsk" placeholder="간식..." rows="2"></textarea>
+          </div>
+          <div class="btn-group">
+            <button class="nsw" id="n2d">☀️ Day로 이동</button>
+            <button class="nsw" id="n2c">← 처음으로</button>
+          </div>
+        </div>
+
+        <div class="nc" style="grid-column: 2 / 4; grid-row: 1; padding-bottom: 18px;">
+          <div class="nt2">Mood Tracker</div>
+          <div class="mw"><table class="mt" id="mtbl"></table></div>
+        </div>
+
+        <div class="nc grow" style="grid-column: 2 / 3; grid-row: 2; display: flex; flex-direction: column;">
+          <div class="nt2">Journal</div>
+          <textarea class="nj" id="njrnl" placeholder="오늘 하루 어땠나요?"></textarea>
+        </div>
+
+        <div class="col right-col" style="grid-column: 3 / 4; grid-row: 2;">
+          <div class="nc grow"><div class="nt2">Preparing tomorrow</div><textarea class="np" id="nprep" placeholder="내일 준비할 것들..."></textarea></div>
+          <button class="nsb" id="nsave">저장하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var MOODS=['행복함','생산적임','그냥 저냥','짜증','우울/슬픔','아픔'];
+  var sch=[], tasks=[{t:'',d:false},{t:'',d:false},{t:'',d:false},{t:'',d:false}], mDs='';
+  var calDate = new Date(); 
+
+  async function fetchWeather() {
+    try {
+      const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current_weather=true&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FSeoul');
+      const data = await res.json();
+
+      const cur = data.current_weather;
+      const daily = data.daily;
+      
+      const high = Math.round(daily.temperature_2m_max[0]);
+      const low = Math.round(daily.temperature_2m_min[0]);
+      const rainPop = daily.precipitation_probability_max[0];
+      const tempStr = `High: ${high}°C &nbsp;Low: ${low}°C`;
+      
+      let icon = '☀️';
+      let desc = 'Clear';
+      const code = cur.weathercode;
+      if (code === 1 || code === 2 || code === 3) { icon = '⛅'; desc = 'Cloudy'; }
+      else if (code >= 45 && code <= 48) { icon = '🌫️'; desc = 'Fog'; }
+      else if (code >= 51 && code <= 67) { icon = '🌧️'; desc = 'Rain'; }
+      else if (code >= 71 && code <= 77) { icon = '❄️'; desc = 'Snow'; }
+      else if (code >= 80 && code <= 82) { icon = '🌦️'; desc = 'Showers'; }
+      else if (code >= 95 && code <= 99) { icon = '⛈️'; desc = 'Thunderstorm'; }
+
+      const descStr = `${desc} &nbsp;Rain: ${rainPop}%`;
+
+      document.getElementById('wicon').textContent = icon;
+      document.getElementById('wtemp').innerHTML = tempStr;
+      document.getElementById('wdesc').innerHTML = descStr;
+    } catch (err) {
+      console.error('Weather fetching error:', err);
+      document.getElementById('wicon').textContent = '⚠️';
+      document.getElementById('wtemp').innerHTML = 'Weather info';
+      document.getElementById('wdesc').innerHTML = 'Offline or Unavailable';
+    }
+  }
+
+  fetchWeather();
+
+  function gk(tp,ds){return 'w_'+tp+'_'+ds}
+  function toDay(){var n=new Date();return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2)}
+  function fmt(ds){var p=ds.split('-'),mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return mo[+p[1]-1]+' '+(+p[2])+', '+p[0]}
+
+  function GP(p){
+    ['pg0','pg1','pg2'].forEach(function(id){document.getElementById(id).className='pg'});
+    document.getElementById(p).className='pg on';
+    if(p==='pg1') LD();
+    if(p==='pg2') LN();
+  }
+
+  document.getElementById('bday').addEventListener('click',function(){GP('pg1')});
+  document.getElementById('bnight').addEventListener('click',function(){GP('pg2')});
+  document.getElementById('d2n').addEventListener('click',function(){GP('pg2')});
+  document.getElementById('d2c').addEventListener('click',function(){GP('pg0')});
+  document.getElementById('n2d').addEventListener('click',function(){GP('pg1')});
+  document.getElementById('n2c').addEventListener('click',function(){GP('pg0')});
+  document.getElementById('dsave').addEventListener('click',function(){SD()});
+  document.getElementById('nsave').addEventListener('click',function(){SN()});
+  document.getElementById('tladd').addEventListener('click',function(){AS()});
+  document.getElementById('mcls').addEventListener('click',function(){CM()});
+  document.getElementById('tbd').addEventListener('click',function(){ST('d')});
+  document.getElementById('tbn').addEventListener('click',function(){ST('n')});
+  document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)CM()});
+
+  function UC(){
+    var n=new Date(),h=n.getHours()%12,m=n.getMinutes(),s=n.getSeconds();
+    var hh=document.getElementById('hh'),hm=document.getElementById('hm');
+    if(hh)hh.style.transform='rotate('+(h/12*360+m/60*30)+'deg)';
+    if(hm)hm.style.transform='rotate('+(m/60*360+s/60*6)+'deg)';
+    var ct=document.getElementById('ctime');
+    if(ct)ct.textContent=('0'+n.getHours()).slice(-2)+':'+('0'+m).slice(-2);
+  }
+  setInterval(UC,1000);UC();
+
+  function IM(){
+    var n=new Date();
+    var WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var MOS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var el=document.getElementById('cdate');if(el)el.textContent=WD[n.getDay()]+' '+n.getDate()+', '+MO[n.getMonth()];
+    var se=document.getElementById('sdate');if(se)se.textContent='Today • '+(n.getMonth()+1)+'/'+n.getDate()+' '+WD[n.getDay()];
+    var dim=new Date(n.getFullYear(),n.getMonth()+1,0).getDate();
+    var pct=Math.round(n.getDate()/dim*100);
+    var pm=document.getElementById('pmon');if(pm)pm.textContent=MOS[n.getMonth()];
+    var pp=document.getElementById('ppct');if(pp)pp.textContent=pct+'%';
+    var pf=document.getElementById('pfill');if(pf)setTimeout(function(){pf.style.width=pct+'%'},100);
+  }
+
+  function RC(){
+    var el=document.getElementById('mcal');if(!el)return;
+    var y=calDate.getFullYear(), mo=calDate.getMonth();
+    var today = new Date();
+    var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var first=new Date(y,mo,1).getDay(),sd=first===0?6:first-1;
+    var dim=new Date(y,mo+1,0).getDate();
+    
+    var h='<div class="ch">' +
+          '<span class="cal-nav" id="calPrev">&lt;</span>' +
+          '<span>'+MO[mo]+' '+y+'</span>' +
+          '<span class="cal-nav" id="calNext">&gt;</span>' +
+          '</div><div class="cg" style="flex:1; align-content:space-evenly;">';
+          
+    ['M','T','W','T','F','S','S'].forEach(function(d){h+='<div class="cdh">'+d+'</div>'});
+    for(var i=0;i<sd;i++)h+='<div class="cdd em"></div>';
+    
+    for(var d=1;d<=dim;d++){
+      var ds=y+'-'+('0'+(mo+1)).slice(-2)+'-'+('0'+d).slice(-2);
+      var it=(d===today.getDate() && mo===today.getMonth() && y===today.getFullYear());
+      var hd=localStorage.getItem(gk('day',ds))||localStorage.getItem(gk('night',ds));
+      h+='<div class="cdd'+(it?' tod':'')+(hd?' hd':'')+'" data-ds="'+ds+'">'+d+'</div>';
+    }
+    h+='</div>';
+    el.innerHTML=h;
+    
+    document.getElementById('calPrev').addEventListener('click', function(){
+      calDate.setMonth(calDate.getMonth() - 1);
+      RC();
+    });
+    document.getElementById('calNext').addEventListener('click', function(){
+      calDate.setMonth(calDate.getMonth() + 1);
+      RC();
+    });
+
+    el.querySelectorAll('.cdd:not(.em)').forEach(function(dd){
+      dd.addEventListener('click',function(){OH(dd.getAttribute('data-ds'))});
+    });
+  }
+
+  function RS(){
+    var tl=document.getElementById('tl');if(!tl)return;
+    tl.innerHTML=sch.slice().sort(function(a,b){return a.t>b.t?1:-1}).map(function(it,i){
+      return '<div class="tli"><div class="tll"></div><div class="tld"></div>'+
+             '<div class="tlb '+(it.c?'dn':'')+'">'+
+             '<input type="checkbox" class="sch-chk" data-i="'+i+'" '+(it.c?'checked':'')+'>'+
+             '<span>'+it.t+' '+it.x+'</span></div>'+
+             '<button class="tlx" data-i="'+i+'">×</button></div>';
+    }).join('');
+    
+    tl.querySelectorAll('.tlx').forEach(function(b){
+      b.addEventListener('click',function(){sch.splice(+b.getAttribute('data-i'),1);RS()});
+    });
+    
+    tl.querySelectorAll('.sch-chk').forEach(function(c){
+      c.addEventListener('change',function(){sch[+c.getAttribute('data-i')].c=c.checked;RS()});
+    });
+  }
+  
+  function AS(){
+    var t=document.getElementById('tlt').value.trim();
+    var x=document.getElementById('tlx').value.trim();
+    if(!x)return;
+    sch.push({t:t||'??:??',x:x,c:false});
+    document.getElementById('tlt').value='';
+    document.getElementById('tlx').value='';
+    RS();
+  }
+
+  function RT(){
+    var el=document.getElementById('tlist');if(!el)return;
+    el.innerHTML=tasks.map(function(tk,i){
+      return '<div class="trow"><input type="checkbox" class="tc" data-i="'+i+'" '+(tk.d?'checked':'')+'>'+
+      '<input class="tt'+(tk.d?' dn':'')+'" data-i="'+i+'" value="'+(tk.t||'')+'" placeholder="할 일 '+(i+1)+'..."></div>';
+    }).join('');
+    el.querySelectorAll('.tc').forEach(function(c){
+      c.addEventListener('change',function(){tasks[+c.getAttribute('data-i')].d=c.checked;RT()});
+    });
+    el.querySelectorAll('.tt').forEach(function(inp){
+      inp.addEventListener('input',function(){tasks[+inp.getAttribute('data-i')].t=inp.value});
+    });
+  }
+
+  function RM(){
+    var tbl=document.getElementById('mtbl');if(!tbl)return;
+    var n=new Date(),dim=new Date(n.getFullYear(),n.getMonth()+1,0).getDate();
+    var h='<thead><tr><th></th>';
+    for(var d=1;d<=dim;d++)h+='<th>'+d+'</th>';
+    h+='</tr></thead><tbody>';
+    MOODS.forEach(function(mood){
+      h+='<tr><td>'+mood+'</td>';
+      for(var d=1;d<=dim;d++){
+        var ds=n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+d).slice(-2);
+        var data=JSON.parse(localStorage.getItem(gk('night',ds))||'{}');
+        var on=data.moods&&data.moods.indexOf(mood)>-1;
+        h+='<td><div class="md'+(on?' on':'')+'" data-ds="'+ds+'" data-mood="'+mood+'"></div></td>';
+      }
+      h+='</tr>';
+    });
+    h+='</tbody>';
+    tbl.innerHTML=h;
+    tbl.querySelectorAll('.md').forEach(function(dot){
+      dot.addEventListener('click',function(){
+        var ds=dot.getAttribute('data-ds'),mood=dot.getAttribute('data-mood');
+        var data=JSON.parse(localStorage.getItem(gk('night',ds))||'{}');
+        if(!data.moods)data.moods=[];
+        var idx=data.moods.indexOf(mood);
+        if(idx>-1)data.moods.splice(idx,1);else data.moods.push(mood);
+        localStorage.setItem(gk('night',ds),JSON.stringify(data));
+        dot.classList.toggle('on');
+      });
+    });
+  }
+
+  function SD(){
+    var ds=toDay();
+    localStorage.setItem(gk('day',ds),JSON.stringify({sch:sch,jrnl:document.getElementById('djrnl').value,prep:document.getElementById('dprep').value,rem:document.getElementById('drem').value,tasks:tasks}));
+    RC();alert('Day 저장 완료 ✓');
+  }
+  
+  function LD(){
+    IM();RC();
+    var ds=toDay(),data=JSON.parse(localStorage.getItem(gk('day',ds))||'{}');
+    sch=data.sch||[];
+    tasks=data.tasks||[{t:'',d:false},{t:'',d:false},{t:'',d:false},{t:'',d:false}];
+    RS();RT();
+    var j=document.getElementById('djrnl');if(j)j.value=data.jrnl||'';
+    var p=document.getElementById('dprep');if(p)p.value=data.prep||'';
+    var r=document.getElementById('drem');if(r)r.value=data.rem||'';
+  }
+  
+  function SN(){
+    var ds=toDay(),data=JSON.parse(localStorage.getItem(gk('night',ds))||'{}');
+    data.bk=document.getElementById('nbk').value;
+    data.lch=document.getElementById('nlch').value;
+    data.dn=document.getElementById('ndn').value;
+    data.sk=document.getElementById('nsk').value;
+    data.jrnl=document.getElementById('njrnl').value;
+    data.prep=document.getElementById('nprep').value;
+    localStorage.setItem(gk('night',ds),JSON.stringify(data));
+    alert('Night 저장 완료 ✓');
+  }
+  
+  function LN(){
+    RM();
+    var ds=toDay(),data=JSON.parse(localStorage.getItem(gk('night',ds))||'{}');
+    var m={nbk:'bk',nlch:'lch',ndn:'dn',nsk:'sk',njrnl:'jrnl',nprep:'prep'};
+    Object.keys(m).forEach(function(id){var el=document.getElementById(id);if(el)el.value=data[m[id]]||''});
+  }
+
+  function OH(ds){
+    mDs=ds;
+    document.getElementById('mdt').textContent=fmt(ds);
+    document.getElementById('modal').classList.add('on');
+    ST('d');
+  }
+  
+  function CM(){document.getElementById('modal').classList.remove('on')}
+  
+  function ST(tab){
+    document.getElementById('tbd').className='mtbb'+(tab==='d'?' on':'');
+    document.getElementById('tbn').className='mtbb'+(tab==='n'?' on':'');
+    document.getElementById('mbd').style.display=tab==='d'?'block':'none';
+    document.getElementById('mbn').style.display=tab==='n'?'block':'none';
+    if(tab==='d'){
+      var data=JSON.parse(localStorage.getItem(gk('day',mDs))||'null');
+      if(!data){document.getElementById('mbd').innerHTML='<div class="nd">이 날의 Day 기록이 없습니다</div>';return}
+      var h='';
+      if(data.sch&&data.sch.length)h+='<div class="ms"><div class="mst">Schedule</div><div class="mc2">'+data.sch.map(function(s){return (s.c?'<span style="text-decoration:line-through;opacity:0.5">':'<span>')+s.t+' '+s.x+'</span>'}).join('<br>')+'</div></div>';
+      if(data.jrnl)h+='<div class="ms"><div class="mst">Journal</div><div class="mc2">'+data.jrnl+'</div></div>';
+      if(data.prep)h+='<div class="ms"><div class="mst">준비물</div><div class="mc2">'+data.prep+'</div></div>';
+      if(data.rem)h+='<div class="ms"><div class="mst">Reminder</div><div class="mc2">'+data.rem+'</div></div>';
+      document.getElementById('mbd').innerHTML=h||'<div class="nd">기록 없음</div>';
+    } else {
+      var data2=JSON.parse(localStorage.getItem(gk('night',mDs))||'null');
+      if(!data2){document.getElementById('mbn').innerHTML='<div class="nd">이 날의 Night 기록이 없습니다</div>';return}
+      var h2='',foods=[];
+      if(data2.bk)foods.push('아침: '+data2.bk);
+      if(data2.lch)foods.push('점심: '+data2.lch);
+      if(data2.dn)foods.push('저녁: '+data2.dn);
+      if(data2.sk)foods.push('간식: '+data2.sk);
+      if(foods.length)h2+='<div class="ms"><div class="mst">Today I ate</div><div class="mc2">'+foods.join('<br>')+'</div></div>';
+      if(data2.moods&&data2.moods.length)h2+='<div class="ms"><div class="mst">Mood</div><div class="mc2">'+data2.moods.join(', ')+'</div></div>';
+      if(data2.jrnl)h2+='<div class="ms"><div class="mst">Journal</div><div class="mc2">'+data2.jrnl+'</div></div>';
+      if(data2.prep)h2+='<div class="ms"><div class="mst">Preparing tomorrow</div><div class="mc2">'+data2.prep+'</div></div>';
+      document.getElementById('mbn').innerHTML=h2||'<div class="nd">기록 없음</div>';
+    }
+  }
+});
+</script>
+</body>
+</html>
